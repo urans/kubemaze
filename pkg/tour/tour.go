@@ -89,3 +89,23 @@ func kubeletVersion(node *corev1.Node) string {
 	}
 	return node.Status.NodeInfo.KubeletVersion
 }
+
+// ListPods list all pod in specified namespace
+func ListPods(clientset kubernetes.Interface, namespace string) ([]corev1.Pod, error) {
+	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		slog.Error("list pods failed", "error", err)
+		return nil, err
+	}
+	return pods.Items, nil
+}
+
+// GetPod get pod detail in specified namespace and name
+func GetPod(clientset kubernetes.Interface, namespace, name string) (*corev1.Pod, error) {
+	pod, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		slog.Error("get pod failed", "name", name, "error", err)
+		return nil, err
+	}
+	return pod, nil
+}

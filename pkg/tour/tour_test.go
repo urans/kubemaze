@@ -3,6 +3,7 @@ package tour
 import (
 	"log/slog"
 	"testing"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -86,6 +87,58 @@ func TestGetNode(t *testing.T) {
 			}
 			if got != nil {
 				slog.Info("node info", "name", got.Name, "isMaster", isMaster(got), "isReady", isReady(got), "age", nodeAge(got), "kubelet", kubeletVersion(got))
+			}
+		})
+	}
+}
+
+func TestListPods(t *testing.T) {
+	tests := []struct {
+		name      string
+		clientset kubernetes.Interface
+		namespace string
+		wantErr   bool
+	}{
+		{"deault", initDevKubeClient(t), "default", false},
+		{"kube-system", initDevKubeClient(t), "kube-system", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ListPods(tt.clientset, tt.namespace)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListPods() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			for _, pod := range got {
+				slog.Info("pod", "namespace", pod.Namespace, "name", pod.Name, "kind", pod.Kind, "phase", pod.Status.Phase, "node", pod.Spec.NodeName)
+			}
+		})
+	}
+}
+
+func TestGetPod(t *testing.T) {
+	type args struct {
+		clientset kubernetes.Interface
+		namespace string
+		name      string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"A", args{initDevKubeClient(t), "default", "minikube"}, true},
+		{"B", args{initDevKubeClient(t), "kube-system", "kube-apiserver-minikube"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetPod(tt.args.clientset, tt.args.namespace, tt.args.name)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetPod() error = %v, wantErr = %v", err, tt.wantErr)
+				return
+			}
+			if got != nil {
+				slog.Info("pod info", "name", got.Name, "phase", got.Status.Phase, "age", time.Now().Sub(got.CreationTimestamp.Time))
 			}
 		})
 	}
