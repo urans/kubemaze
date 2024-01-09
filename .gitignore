@@ -29,3 +29,6 @@
 
 # Project-local glide cache
 .glide
+
+# Ingore build binaries
+cmd/kubewatch/kubewatch

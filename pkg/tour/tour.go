@@ -51,6 +51,16 @@ func NewKubeClientDynamic(kubeconfig string) (dynamic.Interface, error) {
 	return dynamic.NewForConfig(config)
 }
 
+// ListNamespaces lists the namespaces in the cluster
+func ListNamespaces(clientset kubernetes.Interface) ([]corev1.Namespace, error) {
+	ns, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		slog.Error("list namespaces failed", "error", err)
+		return nil, err
+	}
+	return ns.Items, nil
+}
+
 // ListNodes list all nodes in the cluster
 func ListNodes(clientset kubernetes.Interface, labels map[string]string) ([]corev1.Node, error) {
 	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{

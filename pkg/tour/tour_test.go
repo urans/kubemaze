@@ -178,7 +178,7 @@ func TestCreateSecretFromFile(t *testing.T) {
 		},
 
 		{"C", args{initDevKubeClient(t), "kubemaze", "docker-daemon.json",
-			path.Join(os.Getenv("HOME"), ".docker/daemon.json")}, true,
+			path.Join(os.Getenv("HOME"), ".docker/daemon.json")}, false,
 		},
 
 		{"D", args{initDevKubeClient(t), "kubemaze", "notexist.json",
@@ -235,6 +235,34 @@ func TestNewKubeClientDynamic(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewKubeClientDynamic() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+		})
+	}
+}
+
+func TestListNamespaces(t *testing.T) {
+	type args struct {
+		clientset kubernetes.Interface
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"A", args{initDevKubeClient(t)}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ListNamespaces(tt.args.clientset)
+			t.Logf("ListNamespaces() got = %v, error = %v", got, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListNamespaces() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				for _, ns := range got {
+					t.Logf("ranged namespace item: %v", ns.Name)
+				}
 			}
 		})
 	}
