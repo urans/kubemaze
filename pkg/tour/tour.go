@@ -12,7 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -27,6 +29,26 @@ func NewKubeClient(kubeconfig string) (kubernetes.Interface, error) {
 	}
 	slog.Debug("kubeconfig loaded", "config", config)
 	return kubernetes.NewForConfig(config)
+}
+
+// NewKubeClientInner creates a client inside a Kubernetes cluster
+func NewKubeClientInner() (kubernetes.Interface, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		slog.Error("load incluster kubeconfig failed", "error", err)
+		return nil, err
+	}
+	return kubernetes.NewForConfig(config)
+}
+
+// NewKubeClientDynamic creates a dynical kube client
+func NewKubeClientDynamic(kubeconfig string) (dynamic.Interface, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		slog.Error("load kubeconfig failed", "error", err)
+		return nil, err
+	}
+	return dynamic.NewForConfig(config)
 }
 
 // ListNodes list all nodes in the cluster

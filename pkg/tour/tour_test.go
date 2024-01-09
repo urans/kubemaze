@@ -8,9 +8,15 @@ import (
 	"time"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var devKubeConfig = path.Join(os.Getenv("HOME"), ".kube/config")
+
+func TestFakeClient(t *testing.T) {
+	fc := fake.NewSimpleClientset()
+	t.Logf("fake rest client: %v", fc.NodeV1().RESTClient())
+}
 
 func TestNewKubeClient(t *testing.T) {
 	type args struct {
@@ -185,6 +191,49 @@ func TestCreateSecretFromFile(t *testing.T) {
 			t.Logf("CreateSecretFromFile() got = %v, err = %v", got, err)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateSecretFromFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func TestNewKubeClientInner(t *testing.T) {
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{"test-create-kube-client-incluster", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewKubeClientInner()
+			t.Logf("NewKubeClientInner() got = %v, error = %v", got, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewKubeClientInner() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func TestNewKubeClientDynamic(t *testing.T) {
+	type args struct {
+		kubeconfig string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"A", args{"xxx/config"}, true},
+		{"B", args{path.Join(os.Getenv("HOME"), ".kube/config")}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewKubeClientDynamic(tt.args.kubeconfig)
+			t.Logf("NewKubeClientDynamic() got = %v, err = %v", got, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewKubeClientDynamic() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
