@@ -6,6 +6,8 @@
 
 ## Informor
 
-## Sample Controller
+## Controller
 
-## CRD Controller
+## CRD
+
+## Operator

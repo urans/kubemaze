@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -108,4 +111,31 @@ func GetPod(clientset kubernetes.Interface, namespace, name string) (*corev1.Pod
 		return nil, err
 	}
 	return pod, nil
+}
+
+// CreateSecretFromFile creates a secret from a file
+func CreateSecretFromFile(clientset kubernetes.Interface, namespace, name, fpath string) (*corev1.Secret, error) {
+	content, err := os.ReadFile(fpath)
+	if err != nil {
+		slog.Error("read file failed", "path", fpath, "error", err)
+		return nil, err
+	}
+	dir, fname := path.Split(fpath)
+	slog.Info("file info", "dir", dir, "name", fname)
+	data := make(map[string][]byte)
+	data[fname] = content
+
+	result, err := clientset.CoreV1().Secrets(namespace).Create(context.TODO(),
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name, Namespace: namespace,
+			},
+			Data: data,
+		}, metav1.CreateOptions{},
+	)
+	if kerrs.IsAlreadyExists(err) {
+		slog.Warn(err.Error(), "namespace", namespace, "name", name)
+		return result, nil
+	}
+	return result, err
 }

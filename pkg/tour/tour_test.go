@@ -2,13 +2,15 @@ package tour
 
 import (
 	"log/slog"
+	"os"
+	"path"
 	"testing"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
 )
 
-const devKubeConfig = "/Users/kallen/.kube/config"
+var devKubeConfig = path.Join(os.Getenv("HOME"), ".kube/config")
 
 func TestNewKubeClient(t *testing.T) {
 	type args struct {
@@ -19,8 +21,9 @@ func TestNewKubeClient(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{"A", args{"~/.kube/config"}, true},
+		{"A", args{path.Join(os.Getenv("HOME"), ".kube/config")}, false},
 		{"B", args{devKubeConfig}, false},
+		{"C", args{"test-config-not-exist"}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -35,7 +38,11 @@ func TestNewKubeClient(t *testing.T) {
 
 func initDevKubeClient(t *testing.T) kubernetes.Interface {
 	t.Helper()
-	client, _ := NewKubeClient(devKubeConfig)
+
+	client, err := NewKubeClient(devKubeConfig)
+	if err != nil {
+		t.Fatalf("build dev client error: %v", err)
+	}
 	return client
 }
 
@@ -139,6 +146,46 @@ func TestGetPod(t *testing.T) {
 			}
 			if got != nil {
 				slog.Info("pod info", "name", got.Name, "phase", got.Status.Phase, "age", time.Now().Sub(got.CreationTimestamp.Time))
+			}
+		})
+	}
+}
+
+func TestCreateSecretFromFile(t *testing.T) {
+	type args struct {
+		clientset kubernetes.Interface
+		namespace string
+		name      string
+		fpath     string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"A", args{initDevKubeClient(t), "default", "docker-daemon.json",
+			path.Join(os.Getenv("HOME"), ".docker/daemon.json")}, false,
+		},
+
+		{"B", args{initDevKubeClient(t), "default", "docker-daemon.json",
+			path.Join(os.Getenv("HOME"), ".docker/daemon.json")}, false,
+		},
+
+		{"C", args{initDevKubeClient(t), "kubemaze", "docker-daemon.json",
+			path.Join(os.Getenv("HOME"), ".docker/daemon.json")}, true,
+		},
+
+		{"D", args{initDevKubeClient(t), "kubemaze", "notexist.json",
+			path.Join(os.Getenv("HOME"), ".xxx/notexist.json")}, true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := CreateSecretFromFile(tt.args.clientset, tt.args.namespace, tt.args.name, tt.args.fpath)
+			t.Logf("CreateSecretFromFile() got = %v, err = %v", got, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreateSecretFromFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}
