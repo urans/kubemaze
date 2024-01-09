@@ -11,11 +11,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
+	toolwatch "k8s.io/client-go/tools/watch"
 
 	"github.com/urans/kubemaze/pkg/tour"
 )
 
-var watchTimeoutSeconds = int64(10)
+var watchTimeoutSeconds = int64(20)
 
 func main() {
 	clientset, err := tour.NewKubeClient(path.Join(os.Getenv("HOME"), ".kube/config"))
@@ -26,16 +28,30 @@ func main() {
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		watchNamespaces(clientset)
-	}()
+	go watchNamespaces(clientset)
 	wg.Wait()
 }
 
 func watchNamespaces(clientset kubernetes.Interface) error {
-	watcher, err := clientset.CoreV1().Namespaces().Watch(context.Background(), metav1.ListOptions{TimeoutSeconds: &watchTimeoutSeconds})
+	// * Create Watcher Without Retry
+	// watcher, err := clientset.CoreV1().Namespaces().Watch(
+	// context.Background(), metav1.ListOptions{TimeoutSeconds: &watchTimeoutSeconds})
+	// if err != nil {
+	// 	return err
+	// }
+
+	watchFn := func(opts metav1.ListOptions) (watch.Interface, error) {
+		return clientset.CoreV1().Namespaces().Watch(
+			context.Background(), metav1.ListOptions{
+				TimeoutSeconds: &watchTimeoutSeconds,
+			},
+		)
+	}
+
+	// * Create Watcher With Retry
+	watcher, err := toolwatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFn})
 	if err != nil {
+		slog.Error("create retry watcher failed", "error", err)
 		return err
 	}
 

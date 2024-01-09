@@ -32,3 +32,4 @@
 
 # Ingore build binaries
 cmd/kubewatch/kubewatch
+kubemaze
