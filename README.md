@@ -4,6 +4,8 @@
 
 ## Client-go
 
+- [kubernetes/client-go Examples](https://github.com/kubernetes/client-go/blob/master/examples/README.md)
+
 ## Informor
 
 ## Controller
@@ -11,3 +13,9 @@
 ## CRD
 
 ## Operator
+
+- [Quickstart for Go-based Operators](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/)
+
+## Kubebuilder
+
+- [KubeBuilder Quick Start](https://book.kubebuilder.io/quick-start.html)
