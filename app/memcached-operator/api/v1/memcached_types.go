@@ -28,9 +28,6 @@ type MemcachedSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Memcached. Edit memcached_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-
 	// Size defines the number of Memcached instances
 	// The following markers will use OpenAPI v3 schema to validate the value
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html

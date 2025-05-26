@@ -11,3 +11,7 @@
 ```bash
 ❯ kubebuilder create api --group cache --version v1alpha1 --kind Memcached
 ```
+
+```bash
+❯ make generate
+```
