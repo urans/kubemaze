@@ -21,11 +21,13 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logrun "sigs.k8s.io/controller-runtime/pkg/log"
@@ -173,4 +175,61 @@ func (r *MemcachedReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cachev1.Memcached{}).
 		Named("memcached").
 		Complete(r)
+}
+
+// deploymentForMemcached returns a Memcached Deployment object
+func (r *MemcachedReconciler) deploymentForMemcached(memcached *cachev1.Memcached) (*appsv1.Deployment, error) {
+	replicas := memcached.Spec.Size
+	image := "memcached:1.6.26-alpine3.19"
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      memcached.Name,
+			Namespace: memcached.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app.kubernetes.io/name": "project"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app.kubernetes.io/name": "project"},
+				},
+				Spec: corev1.PodSpec{
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: ptr.To(true),
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
+					Containers: []corev1.Container{{
+						Image:           image,
+						Name:            "memcached",
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot:             ptr.To(true),
+							RunAsUser:                ptr.To(int64(1001)),
+							AllowPrivilegeEscalation: ptr.To(false),
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{
+									"ALL",
+								},
+							},
+						},
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: 11211,
+							Name:          "memcached",
+						}},
+						Command: []string{"memcached", "--memory-limit=64", "-o", "modern", "-v"},
+					}},
+				},
+			},
+		},
+	}
+
+	if err := ctrl.SetControllerReference(memcached, deploy, r.Scheme); err != nil {
+		return nil, err
+	}
+	return deploy, nil
 }
