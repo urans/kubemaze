@@ -15,3 +15,23 @@
 ```bash
 ❯ make generate
 ```
+
+- Build Image
+
+```bash
+❯ make docker-build docker-push IMG=kelein/memcached-operator:v0.1.1
+```
+
+- Install CRD
+
+```bash
+❯ make install
+```
+
+- Install Controller
+
+```bash
+❯ make deploy
+# OR
+❯ make deploy IMG=kelein/memcached-operator:v0.1.1
+```
