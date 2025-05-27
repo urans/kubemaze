@@ -1,0 +1,9 @@
+apiVersion: webapp.oasis.urans.com/v1
+kind: Oasis
+metadata:
+  labels:
+    app.kubernetes.io/name: oasis
+    app.kubernetes.io/managed-by: kustomize
+  name: oasis-sample
+spec:
+  # TODO(user): Add fields here
